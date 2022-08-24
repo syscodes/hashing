@@ -22,7 +22,30 @@
 
 namespace Syscodes\Components\Hashing;
 
-class AbstractHasher
+/**
+ * Allows get the information and verifiy of the given hashed value.
+ * 
+ * @author Alexander Campo <jalexcam@gmail.com>
+ */
+abstract class AbstractHasher
 {
+    /**
+     * {@inheritdoc}
+     */
+    public function info($hashedValue): array
+    {
+        return password_get_info($hashedValue);
+    }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function check($value, $hashedValue, array $options = []): bool
+    {
+        if (strlen($hashedValue) === 0) {
+            return false;
+        }
+        
+        return password_verify($value, $hashedValue);
+    }
 }
