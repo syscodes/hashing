@@ -22,7 +22,119 @@
 
 namespace Syscodes\Components\Hashing;
 
-class BcryptHasher
-{
+use RuntimeException;
+use Syscodes\Components\Contracts\Hashing\Hasher;
 
+/**
+ * This class allows the check and verification of the hash given value.
+ * 
+ * @author Alexander Campo <jalexcam@gmail.com>
+ */
+class BcryptHasher extends AbstractHasher implements Hasher
+{
+    /**
+     * The default cost factor.
+     * 
+     * @var int $rounds
+     */
+    protected $rounds = 10;
+    
+    /**
+     * Indicates whether to perform an algorithm check.
+     * 
+     * @var bool $veryAlgoritm
+     */
+    protected $verifyAlgorithm = false;
+    
+    /**
+     * Constructor. Create a new hasher instance.
+     * 
+     * @param  array  $options
+     * 
+     * @return void
+     */
+    public function __construct(array $options = [])
+    {
+        $this->rounds          = $options['rounds'] ?? $this->rounds;
+        $this->verifyAlgorithm = $options['verify'] ?? $this->verifyAlgorithm;
+    }
+    
+    /**
+     * Hash the given value.
+     * 
+     * @param  string  $value
+     * @param  array  $options
+     * 
+     * @return string
+     * 
+     * @throws \RuntimeException
+     */
+    public function make($value, array $options = []): string
+    {
+        $hash = password_hash($value, PASSWORD_BCRYPT, [
+            'cost' => $this->cost($options),
+        ]);
+        
+        if ($hash === false) {
+            throw new RuntimeException('Bcrypt hashing not supported');
+        }
+        
+        return $hash;
+    }
+    
+    /**
+     * Check the given plain value against a hash.
+     * 
+     * @param  string  $value
+     * @param  string  $hashedValue
+     * @param  array  $options
+     * 
+     * @return bool
+     * 
+     * @throws \RuntimeException
+     */
+    public function check($value, $hashedValue, array $options = []): bool
+    {
+        if ($this->verifyAlgorithm && $this->info($hashedValue)['algoName'] !== 'bcrypt') {
+            throw new RuntimeException('This password does not use the Bcrypt algorithm');
+        }
+        
+        return parent::check($value, $hashedValue, $options);
+    }
+    
+    /**
+     * {@inheritdoc}
+     */
+    public function needsRehash($hashedValue, array $options = []): bool
+    {
+        return password_needs_rehash($hashedValue, PASSWORD_BCRYPT, [
+            'cost' => $this->cost($options),
+        ]);
+    }
+    
+    /**
+     * Set the default password work factor.
+     * 
+     * @param  int  $rounds
+     * 
+     * @return self
+     */
+    public function setRounds($rounds): self
+    {
+        $this->rounds = (int) $rounds;
+        
+        return $this;
+    }
+    
+    /**
+     * Extract the cost value from the options array.
+     * 
+     * @param  array  $options
+     * 
+     * @return int
+     */
+    protected function cost(array $options = []): int
+    {
+        return $options['rounds'] ?? $this->rounds;
+    }
 }
